@@ -4,6 +4,8 @@
 
 ## Reference Architecture
 
+![](assets/GCP_RE_GenAI.drawio.png)
+
 ## Demo
 
 ## Additional Resources
