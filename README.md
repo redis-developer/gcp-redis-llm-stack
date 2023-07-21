@@ -30,13 +30,12 @@
 4. **Load Embeddings**: We store the rich embeddings in Redis Enterprise as an additional low-latency data layer on top of BigQuery.
 4. **Create Vector Index**: We create a search index in Redis Enterprise that enables real-time semantic search. While BigQuery holds the primary data, Redis holds the embeddings.
 
-## Use Cases
+## Potential Use Cases
 This architecture contains many essential elements required to build real-world LLM applications that can enhance your business. A few examples include:
 
-- [Customer Support Agent / Chatbot](examples/customer-support-agent/)
+- Customer Support Agent / Chatbot - COMING SOON
 - [Virtual Shopping Assistant](https://github.com/RedisVentures/redis-langchain-chatbot)
 - [Document Retrieval Engine](https://github.com/RedisVentures/rdis-arXiv-search)
-- Fraud and Anomaly Detection
 
 ## Tutorial
 <a href="https://colab.research.google.com/github/RedisVentures/redis-google-llms/blob/main/BigQuery_Palm_Redis.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
