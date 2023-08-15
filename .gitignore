@@ -2,3 +2,4 @@ __pycache__/
 notes.txt
 .DS_Store
 repos
+.env

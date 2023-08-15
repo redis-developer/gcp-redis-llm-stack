@@ -14,17 +14,30 @@ services:
       timeout: 1m30s
       retries: 5
       start_period: 5s
-  jupyter:
-    image: jupyter/minimal-notebook:latest
-    container_name: jupyter
-    volumes:
-      - ./:/home/jovyan/
-    ports:
-      - "8888:8888"
-    depends_on:
-      - "redis"
-    environment:
-      JUPYTER_ENABLE_LAB: "yes"
+  chatbot:
+      container_name: streamlit
+      build:
+        context: ./
+      volumes:
+        - ./:/app
+      ports:
+        - "8080:8080"
+      env_file:
+        - .env
+      depends_on:
+        redis:
+          condition: service_healthy
+  # jupyter:
+  #   image: jupyter/minimal-notebook:latest
+  #   container_name: jupyter
+  #   volumes:
+  #     - ./:/home/jovyan/
+  #   ports:
+  #     - "8888:8888"
+  #   depends_on:
+  #     - "redis"
+  #   environment:
+  #     JUPYTER_ENABLE_LAB: "yes"
 
 volumes:
   redis_data:
