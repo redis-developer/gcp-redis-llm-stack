@@ -20,10 +20,13 @@ services:
         context: ./
       volumes:
         - ./:/app
+        - ./:/credentials
       ports:
         - "8080:8080"
       env_file:
         - .env
+      environment:
+        - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp_credentials.json
       depends_on:
         redis:
           condition: service_healthy

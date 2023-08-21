@@ -1,8 +1,10 @@
+langchain
 redis==4.5.3
-redisvl==0.0.3
+# redisvl==0.0.3
 python-dotenv==0.21.0
-langchain==0.0.153
-streamlit==1.18.0
+streamlit==1.24.1
 streamlit-chat
-vertexai
+google-cloud-aiplatform>=1.26.
 sentence-transformers==2.2.2
+altair==4.0
+pypdf
