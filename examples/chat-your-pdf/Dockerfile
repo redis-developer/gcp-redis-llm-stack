@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install python-tk python3-tk tk-dev -y
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY app/requirements.txt .
 
 RUN pip install -r requirements.txt
 

@@ -19,8 +19,7 @@ services:
       build:
         context: ./
       volumes:
-        - ./:/app
-        - ./:/credentials
+        - ./app/:/app
       ports:
         - "8080:8080"
       env_file:

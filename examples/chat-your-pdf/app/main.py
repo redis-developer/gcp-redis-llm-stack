@@ -1,9 +1,10 @@
 import os
 import streamlit as st
-import vertexai
+# import vertexai
 import uuid
 
-from langchain.chat_models import ChatVertexAI
+
+from langchain.chat_models import ChatVertexAI, ChatOpenAI
 from langchain.document_loaders import PyPDFLoader
 from langchain.memory import ConversationBufferMemory
 from langchain.memory.chat_message_histories import RedisChatMessageHistory
@@ -12,15 +13,13 @@ from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chains import ConversationalRetrievalChain
 from langchain.vectorstores import Redis
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.schema.messages import SystemMessage
 
-# from redisvl.llmcache import SemanticCache
 
 from dotenv import load_dotenv
 load_dotenv()
 
 
-vertexai.init(project=os.environ['PROJECT_ID'], location=os.environ['LOCATION'])
+# vertexai.init(project=os.environ['PROJECT_ID'], location=os.environ['LOCATION'])
 
 
 if "session_id" not in st.session_state:
@@ -45,10 +44,10 @@ def configure_retriever(path):
 
     # Create embeddings and store in vectordb
     embeddings = VertexAIEmbeddings()
-    vectordb = Redis.from_documents(splits, embeddings, redis_url=os.environ["REDIS_URL"])
+    vectordb = Redis.from_documents(splits, embeddings, redis_url=os.environ["REDIS_URL"], index_name="chatbot")
 
     # Define retriever
-    retriever = vectordb.as_retriever(search_kwargs={"k": 3})
+    retriever = vectordb.as_retriever(search_kwargs={"k": 5})
 
     return retriever
 
@@ -59,39 +58,32 @@ class StreamHandler(BaseCallbackHandler):
         self.text = initial_text
 
     def on_llm_new_token(self, token: str, **kwargs) -> None:
+        print("new token", flush=True)
         self.text += token
         self.container.markdown(self.text)
 
 
-# class PrintRetrievalHandler(BaseCallbackHandler):
-#     def __init__(self, container):
-#         self.container = container.expander("Context Retrieval")
+class PrintRetrievalHandler(BaseCallbackHandler):
+    def __init__(self, container):
+        self.container = container.expander("Context Retrieval")
 
-#     def on_retriever_start(self, query: str, **kwargs):
-#         self.container.write(f"**Question:** {query}")
+    def on_retriever_start(self, query: str, **kwargs):
+        self.container.write(f"**Question:** {query}")
 
-#     def on_retriever_end(self, documents, **kwargs):
-#         # self.container.write(documents)
-#         for idx, doc in enumerate(documents):
-#             source = os.path.basename(doc.metadata["source"])
-#             self.container.write(f"**Document {idx} from {source}**")
-#             self.container.markdown(doc.page_content)
+    def on_retriever_end(self, documents, **kwargs):
+        # self.container.write(documents)
+        for idx, doc in enumerate(documents):
+            source = os.path.basename(doc.metadata["source"])
+            self.container.write(f"**Document {idx} from {source}**")
+            self.container.markdown(doc.page_content)
 
 
 def reset_msg_history(msgs: RedisChatMessageHistory):
     msgs.clear()
-    msgs.add_message(SystemMessage(content="""You are a friendly AI assistant that can help a user understand their chosen PDF document.
-                                   They will ask questions about the document in question and you can respond with known information driven by facts alone.
-                                   You may not discuss arbitrary topics or veer too far off course in converation."""))
-    msgs.add_ai_message("How can I help you?")
+    msgs.add_ai_message("I am a friendly AI assistant that can help you understand your Chevy 2022 Colorado vehicle based on the provided PDF car manual. Ask a question of your manual!")
 
 
 def render():
-    # openai_api_key = st.sidebar.text_input("OpenAI API Key", type="password")
-    # if not openai_api_key:
-    #     st.info("Please add your OpenAI API key to continue.")
-    #     st.stop()
-
     retriever = configure_retriever(os.environ["DOCS_FOLDER"])
 
     # Setup memory for contextual conversation
@@ -101,12 +93,18 @@ def render():
     )
     memory = ConversationBufferMemory(memory_key="chat_history", chat_memory=msgs, return_messages=True)
 
-    # Setup LLM and QA chain
-    llm = ChatVertexAI(
-        temperature=0.1, streaming=True
-    )
-    qa_chain = ConversationalRetrievalChain.from_llm(
-        llm, retriever=retriever, memory=memory, verbose=True
+    # chatLLM = ChatVertexAI(
+    #     temperature=0.1,
+    #     streaming=True,
+    #     project=os.environ["PORJECT"],
+    #     location=os.environ["LOCATION"]
+    # )
+    chatLLM = ChatOpenAI(streaming=True)
+    print("making QA chain", flush=True)
+    qachat = ConversationalRetrievalChain.from_llm(
+        llm=chatLLM,
+        memory=memory,
+        retriever=retriever
     )
 
     # # Setup LLMCache
@@ -123,17 +121,15 @@ def render():
         if msg.type in avatars:
             st.chat_message(avatars[msg.type]).write(msg.content)
 
-    if user_query := st.chat_input(placeholder="Ask me about your pdf!"):
+    if user_query := st.chat_input(placeholder="Ask me anything!"):
         st.chat_message("user").write(user_query)
 
         with st.chat_message("assistant"):
-            # retrieval_handler = PrintRetrievalHandler(st.container())
+            print("GENERATING RESPONSE", flush=True)
+            retrieval_handler = PrintRetrievalHandler(st.container())
             stream_handler = StreamHandler(st.empty())
-            # if result := llmcache.check(user_query):
-            #     for token in result[0].split(" "):
-            #         stream_handler.on_llm_new_token(token)
-            # else:
-            response = qa_chain.run(user_query, callbacks=[stream_handler])
+            response = qachat.run(user_query, callbacks=[retrieval_handler, stream_handler])
+            print("RESPONSE", response, flush=True)
 
 
 if __name__ == "__main__":
