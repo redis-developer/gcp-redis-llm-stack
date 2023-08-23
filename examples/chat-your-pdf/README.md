@@ -5,7 +5,7 @@ This example Streamlit app demonstrates how to build a simple chatbot powered by
 - ⚙️ [LangChain](https://python.langchain.com/docs/get_started/introduction.html) for app orchestration, agent construction, and tools
 - 🖥️ [Streamlit](https://docs.streamlit.io/knowledge-base/tutorials/build-conversational-apps) for the front end and conversational interface
 - ☁️ [GCP Vertex AI Palm 2](https://cloud.google.com/vertex-ai/docs/generative-ai/start/quickstarts/api-quickstart) models for embedding creation and chat completion
-- 💥 Redis and [RedisVL](https://redisvl.com) for Retrieval-Augmented Generation (RAG), LLM Semantic Caching, and chat history persistence
+- 💥 [Redis](https://redis.io) and [RedisVL client](https://redisvl.com) for Retrieval-Augmented Generation (RAG), LLM Semantic Caching, and chat history persistence
 
 { IMAGE FORTHCOMING }
 
@@ -20,9 +20,9 @@ Redis is well-versed to power chatbots thanks to its flexible data models, query
     ```
 - **Chat History** -- ensures distributed & low latency access to conversation history in Redis [Lists](https://redis.io/docs/data-types/lists/)
 
-## Setting up the Environment
+## Setting up the app environment
 
-### Obtain Google Cloud Credentials
+### Obtain google cloud credentials
 You need a valid GCP project, service account, an an application JSON key file in order to auth with GCP. The credentials file will be mounted to the docker container of the chatbot app and exposed through the `GOOGLE_APPLICATION_CREDENTIALS` environment variable. For more information [check out this link](https://cloud.google.com/docs/authentication/application-default-credentials#GAC).
 
 
