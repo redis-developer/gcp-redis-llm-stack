@@ -2,9 +2,14 @@ import os
 import streamlit as st
 import uuid
 
-from redisvl.llmcache.semantic import SemanticCache
+from time import time
 
-from langchain.chat_models import ChatVertexAI, ChatOpenAI
+from config import AppConfig
+
+from redisvl.llmcache.semantic import SemanticCache
+from redisvl.vectorize.text import VertexAITextVectorizer
+
+from langchain.chat_models import ChatVertexAI
 from langchain.document_loaders import PyPDFLoader
 from langchain.memory import ConversationBufferMemory
 from langchain.memory.chat_message_histories import RedisChatMessageHistory
@@ -13,49 +18,36 @@ from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chains import ConversationalRetrievalChain
 from langchain.vectorstores import Redis
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.schema import (
-    AIMessage,
-    HumanMessage,
-    SystemMessage
-)
+from langchain.agents.agent_toolkits import create_retriever_tool
+from langchain.agents.agent_toolkits import create_conversational_retrieval_agent
+
+from langchain.agents import Tool
+from langchain.agents import AgentType
+from langchain.agents import initialize_agent
+
+
+
+# from langchain.schema import (
+#     AIMessage,
+#     HumanMessage,
+#     SystemMessage
+# )
 
 from dotenv import load_dotenv
 load_dotenv()
 
 
+# Load Global env
+
+load_dotenv()
+
+config = AppConfig()
+
 if "session_id" not in st.session_state:
     st.session_state.session_id = uuid.uuid4().hex
 
-# Setup Redis LLMCache
-llmcache = SemanticCache(
-    redis_url=os.environ["REDIS_URL"],
-    threshold=0.75, # semantic similarity threshold
-)
 
-# Setup Redis memory for conversation history
-msgs = RedisChatMessageHistory(
-    session_id=st.session_state.session_id,
-    url=os.environ["REDIS_URL"]
-)
-
-def reset_msg_history(msgs: RedisChatMessageHistory):
-    msgs.clear()
-    msgs.add_ai_message("I am a friendly AI assistant that can help you understand your Chevy 2022 Colorado vehicle based on the provided PDF car manual. Ask a question of your manual!")
-
-
-st.set_page_config(page_title="Chat Your PDF", page_icon="📃")
-st.title("📃 Chat Your PDF")
-
-with st.sidebar:
-
-    check_cache = st.checkbox("Use LLM cache?")
-
-    if st.button("Clear LLM cache"):
-        llmcache.clear()
-
-    if len(msgs.messages) == 0 or st.button("Clear message history"):
-        reset_msg_history(msgs)
-
+# Helpers
 
 @st.cache_resource()
 def configure_retriever(path):
@@ -65,33 +57,92 @@ def configure_retriever(path):
         print(file, flush=True)
         loader = PyPDFLoader(os.path.join(path, file))
         docs.extend(loader.load())
-
     # Split documents
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=10)
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP
+    )
     splits = text_splitter.split_documents(docs)
-
     # Create embeddings and store in vectordb
-    embeddings = VertexAIEmbeddings()
-    vectordb = Redis.from_documents(splits, embeddings, redis_url=os.environ["REDIS_URL"], index_name="chatbot")
-
+    embeddings = VertexAIEmbeddings(project=config.GCP_PROJECT_ID, location=config.GCP_LOCATION)
+    vectordb = Redis.from_documents(
+        splits, embeddings, redis_url=config.REDIS_URL, index_name="chatbot"
+    )
     # Define retriever
-    retriever = vectordb.as_retriever(search_kwargs={"k": 5})
+    retriever = vectordb.as_retriever(search_kwargs={"k": config.RETRIEVE_TOP_K})
+    tool = create_retriever_tool(retriever, "search_chevy_manual", "Searches and returns snippets from the Chevy Colorado 2022 car manual.")
+    return tool
 
-    return retriever
+
+@st.cache_resource()
+def configure_cache():
+    # Setup Redis LLMCache
+    llmcache_embeddings = VertexAITextVectorizer(
+        api_config={"project_id": config.GCP_PROJECT_ID, "location": config.GCP_LOCATION}
+    )
+    return SemanticCache(
+        redis_url=config.REDIS_URL,
+        threshold=config.LLMCACHE_THRESHOLD, # semantic similarity threshold
+        vectorizer=llmcache_embeddings
+    )
 
 
-# class StreamHandler(BaseCallbackHandler):
-#     def __init__(self, container: st.delta_generator.DeltaGenerator, initial_text: str = ""):
-#         self.container = container
-#         self.text = initial_text
+def configure_agent(chat_memory, tools: list):
+    memory = ConversationBufferMemory(
+        memory_key="chat_history", chat_memory=chat_memory, return_messages=True
+    )
+    chatLLM = ChatVertexAI(
+        temperature=0.1,
+        project=config.GCP_PROJECT_ID,
+        location=config.GCP_LOCATION
+    )
+    PREFIX = """"You are a friendly AI assistant that can help you understand your Chevy 2022 Colorado vehicle based on the provided PDF car manual. Users can ask questions of your manual! You should not make anything up."""
 
-#     def on_llm_new_token(self, token: str, **kwargs) -> None:
-#         print("new token", flush=True)
-#         self.text += token
-#         self.container.markdown(self.text)
+    FORMAT_INSTRUCTIONS = """You have access to the following tools:
+
+    {tools}
+
+    Use the following format:
+
+    '''
+    Question: the input question you must answer
+    Thought: you should always think about what to do
+    Action: the action to take, should be one of [{tool_names}]
+    Action Input: the input to the action
+    Observation: the result of the action
+    ... (this Thought/Action/Action Input/Observation can repeat N times)
+    Thought: I now know the final answer
+    Final Answer: the final answer to the original input question
+    '''
+
+    When you have gathered all the information required, respond to the user in a friendly manner.
+    """
+
+    SUFFIX = """
+
+    Begin! Remember to give detailed, informative answers
+
+    Previous conversation history:
+    {chat_history}
+
+    New question: {input}
+    {agent_scratchpad}
+    """
+    return initialize_agent(
+        tools,
+        chatLLM,
+        agent=AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION,
+        verbose=True,
+        memory=memory,
+        agent_kwargs={
+            'prefix': PREFIX,
+            'format_instructions': FORMAT_INSTRUCTIONS,
+            'suffix': SUFFIX
+        }
+    )
 
 
 class PrintRetrievalHandler(BaseCallbackHandler):
+    """Callback to print retrieved source documents from Redis during RAG."""
     def __init__(self, container):
         self.container = container.expander("Context Retrieval")
 
@@ -105,50 +156,79 @@ class PrintRetrievalHandler(BaseCallbackHandler):
             self.container.write(f"**Document {idx} from {source}**")
             self.container.markdown(doc.page_content)
 
-def generate_response(check_cache, user_query, qachat) -> str:
-    if check_cache:
+
+def generate_response(
+    use_cache: bool,
+    llmcache: SemanticCache,
+    user_query: str,
+    agent
+) -> str:
+    t0 = time()
+    if use_cache:
         if response := llmcache.check(user_query):
+            print("Cache Response Time (secs)", time()-t0, flush=True)
             return response[0]
 
     retrieval_handler = PrintRetrievalHandler(st.container())
-    # stream_handler = StreamHandler(st.empty())
-    return qachat.run(user_query, callbacks=[retrieval_handler])
+    response = agent.run(input=user_query, callbacks=[retrieval_handler])
+    print("Full Response Time (secs)", time()-t0, flush=True)
+    return response
 
 
 def render():
-    retriever = configure_retriever(os.environ["DOCS_FOLDER"])
-    memory = ConversationBufferMemory(
-        memory_key="chat_history", chat_memory=msgs, return_messages=True
+    """
+    Render the Streamlit chatbot user interface
+    """
+    # Main Page
+    st.set_page_config(page_title=config.PAGE_TITLE, page_icon=config.PAGE_ICON)
+    st.title(config.PAGE_TITLE)
+
+    # Setup LLMCache in Redis
+    llmcache = configure_cache()
+
+    # Setup Redis memory for conversation history
+    msgs = RedisChatMessageHistory(
+        session_id=st.session_state.session_id, url=config.REDIS_URL
     )
-    chatLLM = ChatVertexAI(
-        temperature=0.1,
-        project=os.environ["PROJECT_ID"],
-        location=os.environ["LOCATION"]
-    )
-    # chatLLM = ChatOpenAI(streaming=True)
-    print("making QA chain", flush=True)
-    qachat = ConversationalRetrievalChain.from_llm(
-        llm=chatLLM,
-        memory=memory,
-        retriever=retriever,
-        verbose=True
-    )
+
+    # Sidebar
+    with st.sidebar:
+        use_cache = st.checkbox("Use LLM cache?")
+        if st.button("Clear LLM cache"):
+            llmcache.clear()
+        if len(msgs.messages) == 0 or st.button("Clear message history"):
+            msgs.clear()
+            # msgs.add_ai_message(
+            #     "I am a friendly AI assistant that can help you understand your Chevy 2022 Colorado vehicle based on the provided PDF car manual. Ask a question of your manual!"
+            # )
+
+    # Setup Redis vector db retrieval
+    retriever = configure_retriever(config.DOCS_FOLDER)
+    agent = configure_agent(chat_memory=msgs, tools=[retriever])
+
+    # Setup QnA Chain
+    # TODO test an agent
+    # qachat = ConversationalRetrievalChain.from_llm(
+    #     llm=chatLLM,
+    #     memory=memory,
+    #     retriever=retriever,
+    #     verbose=True
+    # )
 
     avatars = {"human": "user", "ai": "assistant"}
     for msg in msgs.messages:
         if msg.type in avatars:
-            st.chat_message(avatars[msg.type]).write(msg.content)
+            with st.chat_message(avatars[msg.type]):
+                st.markdown(msg.content)
 
     if user_query := st.chat_input(placeholder="Ask me anything!"):
         st.chat_message("user").write(user_query)
 
         with st.chat_message("assistant"):
-            print("GENERATING RESPONSE", flush=True)
-            response = generate_response(check_cache, user_query, qachat)
+            response = generate_response(use_cache, llmcache, user_query, agent)
             st.markdown(response)
-            print("RESPONSE", response, flush=True)
-
-            if check_cache:
+            if use_cache:
+                # TODO - should we cache responses that were used from the cache?
                 llmcache.store(user_query, response)
 
 

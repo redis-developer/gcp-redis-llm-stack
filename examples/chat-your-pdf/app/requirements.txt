@@ -1,4 +1,4 @@
-git+https://github.com/RedisVentures/redisvl.git@9b5a13a5dcbd31ec61d0df053975cb64d7bba7bb
+git+https://github.com/RedisVentures/redisvl.git@56842b8dee4704ceef381f73baffcbf7c89c163e
 langchain
 openai
 redis==4.5.3
