@@ -33,9 +33,9 @@
 ## Potential Use Cases
 This architecture contains many essential elements required to build real-world LLM applications that can enhance your business. A few examples include:
 
-- Customer Support Agent / Chatbot - COMING SOON
+- [Customer Support Bot](examples/chat-your-pdf/)
 - [Virtual Shopping Assistant](https://github.com/RedisVentures/redis-langchain-chatbot)
-- [Document Retrieval Engine](https://github.com/RedisVentures/rdis-arXiv-search)
+- [Document Retrieval Engine](https://github.com/RedisVentures/redis-arXiv-search)
 
 ## Tutorial
 <a href="https://colab.research.google.com/github/RedisVentures/redis-google-llms/blob/main/BigQuery_Palm_Redis.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
