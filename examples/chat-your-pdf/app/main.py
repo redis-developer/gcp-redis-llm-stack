@@ -15,24 +15,11 @@ from langchain.memory import ConversationBufferMemory
 from langchain.memory.chat_message_histories import RedisChatMessageHistory
 from langchain.embeddings import VertexAIEmbeddings
 from langchain.callbacks.base import BaseCallbackHandler
-from langchain.chains import ConversationalRetrievalChain
 from langchain.vectorstores import Redis
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.agents.agent_toolkits import create_retriever_tool
-from langchain.agents.agent_toolkits import create_conversational_retrieval_agent
-
-from langchain.agents import Tool
 from langchain.agents import AgentType
 from langchain.agents import initialize_agent
-
-
-
-# from langchain.schema import (
-#     AIMessage,
-#     HumanMessage,
-#     SystemMessage
-# )
-
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -51,6 +38,7 @@ if "session_id" not in st.session_state:
 
 @st.cache_resource()
 def configure_retriever(path):
+    """Create the Redis Vector DB retrieval tool"""
     # Read documents
     docs = []
     for file in os.listdir(path):
@@ -75,7 +63,7 @@ def configure_retriever(path):
 
 @st.cache_resource()
 def configure_cache():
-    # Setup Redis LLMCache
+    """Set up the Redis LLMCache built with VertexAI Text Embeddings"""
     llmcache_embeddings = VertexAITextVectorizer(
         api_config={"project_id": config.GCP_PROJECT_ID, "location": config.GCP_LOCATION}
     )
@@ -87,6 +75,7 @@ def configure_cache():
 
 
 def configure_agent(chat_memory, tools: list):
+    """Configure the conversational chat agent that can use the Redis vector db for RAG"""
     memory = ConversationBufferMemory(
         memory_key="chat_history", chat_memory=chat_memory, return_messages=True
     )
@@ -163,6 +152,7 @@ def generate_response(
     user_query: str,
     agent
 ) -> str:
+    """Generate a response to the user's question after checking the cache (if enabled)."""
     t0 = time()
     if use_cache:
         if response := llmcache.check(user_query):
@@ -176,9 +166,7 @@ def generate_response(
 
 
 def render():
-    """
-    Render the Streamlit chatbot user interface
-    """
+    """Render the Streamlit chatbot user interface."""
     # Main Page
     st.set_page_config(page_title=config.PAGE_TITLE, page_icon=config.PAGE_ICON)
     st.title(config.PAGE_TITLE)
@@ -198,30 +186,22 @@ def render():
             llmcache.clear()
         if len(msgs.messages) == 0 or st.button("Clear message history"):
             msgs.clear()
-            # msgs.add_ai_message(
-            #     "I am a friendly AI assistant that can help you understand your Chevy 2022 Colorado vehicle based on the provided PDF car manual. Ask a question of your manual!"
-            # )
+
 
     # Setup Redis vector db retrieval
     retriever = configure_retriever(config.DOCS_FOLDER)
+
+    # Configure Agent
     agent = configure_agent(chat_memory=msgs, tools=[retriever])
 
-    # Setup QnA Chain
-    # TODO test an agent
-    # qachat = ConversationalRetrievalChain.from_llm(
-    #     llm=chatLLM,
-    #     memory=memory,
-    #     retriever=retriever,
-    #     verbose=True
-    # )
-
+    # Chat Interface
     avatars = {"human": "user", "ai": "assistant"}
     for msg in msgs.messages:
         if msg.type in avatars:
             with st.chat_message(avatars[msg.type]):
                 st.markdown(msg.content)
 
-    if user_query := st.chat_input(placeholder="Ask me anything!"):
+    if user_query := st.chat_input(placeholder="Ask me anything about the 2022 Chevy Colorado!"):
         st.chat_message("user").write(user_query)
 
         with st.chat_message("assistant"):
