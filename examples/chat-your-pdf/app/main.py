@@ -1,8 +1,8 @@
 import os
 import streamlit as st
-# import vertexai
 import uuid
 
+from redisvl.llmcache.semantic import SemanticCache
 
 from langchain.chat_models import ChatVertexAI, ChatOpenAI
 from langchain.document_loaders import PyPDFLoader
@@ -13,20 +13,48 @@ from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chains import ConversationalRetrievalChain
 from langchain.vectorstores import Redis
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-
+from langchain.schema import (
+    AIMessage,
+    HumanMessage,
+    SystemMessage
+)
 
 from dotenv import load_dotenv
 load_dotenv()
 
 
-# vertexai.init(project=os.environ['PROJECT_ID'], location=os.environ['LOCATION'])
-
-
 if "session_id" not in st.session_state:
     st.session_state.session_id = uuid.uuid4().hex
 
+# Setup Redis LLMCache
+llmcache = SemanticCache(
+    redis_url=os.environ["REDIS_URL"],
+    threshold=0.75, # semantic similarity threshold
+)
+
+# Setup Redis memory for conversation history
+msgs = RedisChatMessageHistory(
+    session_id=st.session_state.session_id,
+    url=os.environ["REDIS_URL"]
+)
+
+def reset_msg_history(msgs: RedisChatMessageHistory):
+    msgs.clear()
+    msgs.add_ai_message("I am a friendly AI assistant that can help you understand your Chevy 2022 Colorado vehicle based on the provided PDF car manual. Ask a question of your manual!")
+
+
 st.set_page_config(page_title="Chat Your PDF", page_icon="📃")
 st.title("📃 Chat Your PDF")
+
+with st.sidebar:
+
+    check_cache = st.checkbox("Use LLM cache?")
+
+    if st.button("Clear LLM cache"):
+        llmcache.clear()
+
+    if len(msgs.messages) == 0 or st.button("Clear message history"):
+        reset_msg_history(msgs)
 
 
 @st.cache_resource()
@@ -52,15 +80,15 @@ def configure_retriever(path):
     return retriever
 
 
-class StreamHandler(BaseCallbackHandler):
-    def __init__(self, container: st.delta_generator.DeltaGenerator, initial_text: str = ""):
-        self.container = container
-        self.text = initial_text
+# class StreamHandler(BaseCallbackHandler):
+#     def __init__(self, container: st.delta_generator.DeltaGenerator, initial_text: str = ""):
+#         self.container = container
+#         self.text = initial_text
 
-    def on_llm_new_token(self, token: str, **kwargs) -> None:
-        print("new token", flush=True)
-        self.text += token
-        self.container.markdown(self.text)
+#     def on_llm_new_token(self, token: str, **kwargs) -> None:
+#         print("new token", flush=True)
+#         self.text += token
+#         self.container.markdown(self.text)
 
 
 class PrintRetrievalHandler(BaseCallbackHandler):
@@ -77,44 +105,34 @@ class PrintRetrievalHandler(BaseCallbackHandler):
             self.container.write(f"**Document {idx} from {source}**")
             self.container.markdown(doc.page_content)
 
+def generate_response(check_cache, user_query, qachat) -> str:
+    if check_cache:
+        if response := llmcache.check(user_query):
+            return response[0]
 
-def reset_msg_history(msgs: RedisChatMessageHistory):
-    msgs.clear()
-    msgs.add_ai_message("I am a friendly AI assistant that can help you understand your Chevy 2022 Colorado vehicle based on the provided PDF car manual. Ask a question of your manual!")
+    retrieval_handler = PrintRetrievalHandler(st.container())
+    # stream_handler = StreamHandler(st.empty())
+    return qachat.run(user_query, callbacks=[retrieval_handler])
 
 
 def render():
     retriever = configure_retriever(os.environ["DOCS_FOLDER"])
-
-    # Setup memory for contextual conversation
-    msgs = RedisChatMessageHistory(
-        session_id=st.session_state.session_id,
-        url=os.environ["REDIS_URL"]
+    memory = ConversationBufferMemory(
+        memory_key="chat_history", chat_memory=msgs, return_messages=True
     )
-    memory = ConversationBufferMemory(memory_key="chat_history", chat_memory=msgs, return_messages=True)
-
-    # chatLLM = ChatVertexAI(
-    #     temperature=0.1,
-    #     streaming=True,
-    #     project=os.environ["PORJECT"],
-    #     location=os.environ["LOCATION"]
-    # )
-    chatLLM = ChatOpenAI(streaming=True)
+    chatLLM = ChatVertexAI(
+        temperature=0.1,
+        project=os.environ["PROJECT_ID"],
+        location=os.environ["LOCATION"]
+    )
+    # chatLLM = ChatOpenAI(streaming=True)
     print("making QA chain", flush=True)
     qachat = ConversationalRetrievalChain.from_llm(
         llm=chatLLM,
         memory=memory,
-        retriever=retriever
+        retriever=retriever,
+        verbose=True
     )
-
-    # # Setup LLMCache
-    # llmcache = SemanticCache(
-    #     redis_url=os.environ["REDIS_URL"],
-    #     threshold=0.9, # semantic similarity threshold
-    # )
-
-    if len(msgs.messages) == 0 or st.sidebar.button("Clear message history"):
-        reset_msg_history(msgs)
 
     avatars = {"human": "user", "ai": "assistant"}
     for msg in msgs.messages:
@@ -126,10 +144,12 @@ def render():
 
         with st.chat_message("assistant"):
             print("GENERATING RESPONSE", flush=True)
-            retrieval_handler = PrintRetrievalHandler(st.container())
-            stream_handler = StreamHandler(st.empty())
-            response = qachat.run(user_query, callbacks=[retrieval_handler, stream_handler])
+            response = generate_response(check_cache, user_query, qachat)
+            st.markdown(response)
             print("RESPONSE", response, flush=True)
+
+            if check_cache:
+                llmcache.store(user_query, response)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 FROM python:3.9.10-slim-buster
 
-RUN apt-get update && apt-get install python-tk python3-tk tk-dev -y
+RUN apt-get update && apt-get install python-tk python3-tk tk-dev git -y
 
 WORKDIR /app
 
