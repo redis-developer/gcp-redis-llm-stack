@@ -44,7 +44,7 @@ Open the code tutorial in a Colab notebook (recommended) to get your hands dirty
 
 
 ## Additional Resources
-- [DRAFT Blog Post](https://docs.google.com/document/d/1nGelpYQaFcTd1lqLOC3W0ZoXVDNMiI3W3pG7LY4U3n4/edit?usp=sharing)
+- [Google Next '23 & Reference Architecture Blog Post](https://redis.com/blog/building-llm-apps-redis-google-vertex-ai)
 - [LangChain Example](https://github.com/antonum/Redis-Workshops/blob/main/05-LangChain_Redis/05.3_VertexAI_LangChain_Redis.ipynb)
 - [Redis Vector Search Documentation](https://redis.io/docs/interact/search-and-query/search/vectors/)
 - [More Redis AI Resources](https://github.com/RedisVentures)
