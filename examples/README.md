@@ -1,6 +1,6 @@
 # Examples
 
-This directory contains an *evolving* list of example applications built on GCP with Redis Enterprise.
+This directory contains an *evolving* list of example Gen AI applications built on GCP with Redis Enterprise.
 
 | Name | Description |
 | ------- | ------- |
