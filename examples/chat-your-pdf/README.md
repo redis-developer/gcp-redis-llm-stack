@@ -58,5 +58,7 @@ To run the app, follow these steps:
 
 1. Clone this repository to your local machine.
 2. Set up your GCP credentials as outlined above.
-2. Copy the `.env.template` to `.env` and configure the values as outlined above.
-3. Run the app with Docker compose: `docker-compose up`.
+3. Copy the `.env.template` to `.env` and configure the values as outlined above.
+4. Run the app with Docker compose: `docker-compose up.
+5. Hit your brower at http://localhost:8080/.
+
