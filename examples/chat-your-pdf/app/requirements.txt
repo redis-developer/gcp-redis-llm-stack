@@ -1,0 +1,11 @@
+git+https://github.com/RedisVentures/redisvl.git@56842b8dee4704ceef381f73baffcbf7c89c163e
+langchain
+openai
+redis==4.5.3
+python-dotenv==0.21.0
+streamlit==1.24.1
+streamlit-chat
+google-cloud-aiplatform>=1.26.
+sentence-transformers==2.2.2
+altair==4.0
+pypdf
