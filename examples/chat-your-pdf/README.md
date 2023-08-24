@@ -7,8 +7,7 @@ This example Streamlit app demonstrates how to build a simple chatbot powered by
 - ☁️ [GCP Vertex AI Palm 2](https://cloud.google.com/vertex-ai/docs/generative-ai/start/quickstarts/api-quickstart) models for embedding creation and chat completion
 - 💥 [Redis](https://redis.io) and [RedisVL client](https://redisvl.com) for Retrieval-Augmented Generation (RAG), LLM Semantic Caching, and chat history persistence
 
-{ IMAGE FORTHCOMING }
-
+![Chat Your PDF screenshot](https://github.com/RedisVentures/gcp-redis-llm-stack/assets/20304844/fdf24716-965a-4a66-88b2-761427ff61c0)
 
 ## About
 Redis is well-versed to power chatbots thanks to its flexible data models, query engine, and high performance. This enables users to leverage redis for a variety of gen AI needs:
@@ -59,5 +58,7 @@ To run the app, follow these steps:
 
 1. Clone this repository to your local machine.
 2. Set up your GCP credentials as outlined above.
-2. Copy the `.env.template` to `.env` and configure the values as outlined above.
-3. Run the app with Docker compose: `docker-compose up`.
+3. Copy the `.env.template` to `.env` and configure the values as outlined above.
+4. Run the app with Docker compose: `docker-compose up.
+5. Hit your brower at http://localhost:8080/.
+
