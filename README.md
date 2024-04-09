@@ -6,7 +6,7 @@
 
 >This repo serves as a foundational architecture for building LLM applications with Redis and GCP services.
 
-## Reference Architecture
+## Reference architecture
 
 ![](assets/Redis_GCN_GenAI_20240325.png)
 
@@ -20,16 +20,15 @@
     - Vector search for context retrieval from knowledge base
 
 
-## RAG Demo
+## RAG demo
 <a href="https://colab.research.google.com/github/RedisVentures/redis-google-llms/blob/main/Gemini_Redis.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
 **Open the code tutorial using the Colab notebook to get your hands dirty with Redis and Vertex AI on GCP.** It's a step-by-step walkthrough of setting up the required data, and generating embeddings, and building RAG from scratch in order to build fast LLM apps; highlighting Redis vector search and semantic caching.
 
 
-## Additional Resources
-- [Streamlit PDF Chatbot Example App](examples/chat-your-pdf/)
-- [Redis Vector Search Documentation](https://redis.io/docs/interact/search-and-query/search/vectors/)
+## Additional resources
+- [Streamlit PDF chatbot example app](examples/chat-your-pdf/)
+- [Redis vector search documentation](https://redis.io/docs/latest/develop/interact/search-and-query/query/vector-search/)
 - [Get started with RedisVL](https://redis.io/blog/introducing-the-redis-vector-library-for-enhancing-genai-development/)
-- [Google VertexAI Resources](https://cloud.google.com/vertex-ai)
-- [More Redis AI Resources](https://github.com/redis-developer)
-
+- [Google VertexAI resources](https://cloud.google.com/vertex-ai)
+- [More Redis ai resources](https://github.com/redis-developer)
