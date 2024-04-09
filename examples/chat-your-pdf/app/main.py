@@ -6,8 +6,8 @@ from time import time
 
 from config import AppConfig
 
-from redisvl.llmcache.semantic import SemanticCache
-from redisvl.vectorize.text import VertexAITextVectorizer
+from redisvl.extensions.llmcache import SemanticCache
+from redisvl.utils.vectorize import VertexAITextVectorizer
 
 from langchain.chat_models import ChatVertexAI
 from langchain.document_loaders import PyPDFLoader
@@ -157,7 +157,7 @@ def generate_response(
     if use_cache:
         if response := llmcache.check(user_query):
             print("Cache Response Time (secs)", time()-t0, flush=True)
-            return response[0]
+            return response[0]['response']
 
     retrieval_handler = PrintRetrievalHandler(st.container())
     response = agent.run(input=user_query, callbacks=[retrieval_handler])

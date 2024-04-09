@@ -1,7 +1,6 @@
-git+https://github.com/RedisVentures/redisvl.git@56842b8dee4704ceef381f73baffcbf7c89c163e
+git+https://github.com/RedisVentures/redisvl.git@main
 langchain
-openai
-redis==4.5.3
+openai>=1.13.0
 python-dotenv==0.21.0
 streamlit==1.24.1
 streamlit-chat

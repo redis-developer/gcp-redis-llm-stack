@@ -12,4 +12,4 @@ class AppConfig:
     PAGE_TITLE=os.getenv("PAGE_TITLE", "📃 Chat Your PDF")
     PAGE_ICON=os.getenv("PAGE_ICON", "📃")
     RETRIEVE_TOP_K=int(os.getenv("RETRIEVE_TOP_K", 5))
-    LLMCACHE_THRESHOLD=float(os.getenv("LLMCACHE_THRESHOLD", 0.75))
+    LLMCACHE_THRESHOLD=float(os.getenv("LLMCACHE_THRESHOLD", 0.15))
