@@ -14,7 +14,7 @@
 2. Data Extraction and Loading
 3. Large Language Models
     - `text-embedding-gecko@003` for embeddings
-    - `gemini-1.0-pro-001` for LLM generation and chat
+    - `gemini-1.5-flash-001` for LLM generation and chat
 3. High-Performance Data Layer (Redis)
     - Semantic caching to improve LLM performance and associated costs
     - Vector search for context retrieval from knowledge base
