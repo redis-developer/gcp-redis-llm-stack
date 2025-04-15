@@ -20,10 +20,10 @@
     - Vector search for context retrieval from knowledge base
 
 
-## RAG demo
-<a href="https://colab.research.google.com/github/RedisVentures/redis-google-llms/blob/main/Gemini_Redis.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+## RAG + Semantic Caching demo
+<a href="https://github.com/redis-developer/redis-ai-resources/blob/main/python-recipes/semantic-cache/00_semantic_caching_gemini.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
-**Open the code tutorial using the Colab notebook to get your hands dirty with Redis and Vertex AI on GCP.** It's a step-by-step walkthrough of setting up the required data, and generating embeddings, and building RAG from scratch in order to build fast LLM apps; highlighting Redis vector search and semantic caching.
+**Open the code tutorial using the Colab notebook to get your hands dirty with Redis and Vertex AI on GCP.**
 
 
 ## Additional resources
